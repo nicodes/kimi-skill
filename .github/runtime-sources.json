@@ -1,0 +1,18 @@
+[
+  {
+    "source": "skills/kimi-review/SKILL.prompt",
+    "target": "skills/kimi-review/SKILL.md"
+  },
+  {
+    "source": "skills/kimi-review/references/review-prompt.prompt",
+    "target": "skills/kimi-review/references/review-prompt.md"
+  },
+  {
+    "source": "skills/kimi-setup/SKILL.prompt",
+    "target": "skills/kimi-setup/SKILL.md"
+  },
+  {
+    "source": "skills/kimi-task/SKILL.prompt",
+    "target": "skills/kimi-task/SKILL.md"
+  }
+]

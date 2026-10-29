@@ -1,0 +1,22 @@
+---
+name: kimi-setup
+description: Check that the Kimi Code CLI is installed and authenticated; guide install and login if not
+allowed-tools: Bash(kimi:*), Bash(node:*), Bash(npm:*)
+---
+
+Check the Kimi Code CLI setup and report a short status.
+
+Checks, in order:
+1. `kimi --version` — is the CLI installed?
+2. If installed: `kimi doctor` — config and auth check (exit 0 = healthy). Show its output verbatim; it is more authoritative than any interpretation of it.
+3. `node --version` — only relevant for the npm install path (requires Node >= 22.19).
+
+Report a short status list (installed / version / doctor result), then next steps only for what is actually missing:
+
+- CLI missing — two install options:
+  - `npm install -g @moonshot-ai/kimi-code` (requires Node >= 22.19)
+  - `curl -fsSL https://code.kimi.com/kimi-code/install.sh | bash` (no Node required)
+- Doctor failing or not logged in: the user must run the interactive login themselves — suggest typing `! kimi login` (device-code flow). API keys are configured in `~/.kimi-code/config.toml`, not read from shell environment variables — the one exception is the trio `KIMI_MODEL_NAME` / `KIMI_MODEL_API_KEY` / `KIMI_MODEL_BASE_URL`, which configures a custom model endpoint entirely from the environment.
+- Out-of-date CLI: `kimi upgrade`.
+
+When everything is healthy, say so and point the user at `/kimi-review` and `/kimi-task`.
