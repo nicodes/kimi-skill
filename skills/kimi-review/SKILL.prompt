@@ -1,0 +1,59 @@
+---
+name: kimi-review
+description: Run a Kimi Code review of local git changes (working tree or branch diff) and present its findings
+argument-hint: '[--wait|--background] [--base <ref>] [focus...]'
+disable-model-invocation: true
+allowed-tools: Bash(kimi:*), Bash(git:*), AskUserQuestion
+---
+
+Delegate a code review to the Kimi Code CLI (`kimi`) and present its findings.
+
+Raw slash-command arguments:
+`$ARGUMENTS`
+
+Core constraint:
+- This skill is review-only. Do not fix issues, apply patches, or suggest you are about to make changes.
+- Your job is to run the review and return Kimi's output to the user verbatim.
+
+Argument handling:
+- `--base <ref>`: review the branch diff against `<ref>` instead of auto-detecting the target.
+- `--wait` / `--background`: skip the execution-mode question.
+- Everything else is focus text — extra reviewer instructions to pass through faithfully.
+
+Target resolution:
+1. Run `git status --short --untracked-files=all` (also the pre-run snapshot for the write check below).
+2. If `--base <ref>` was given: the target is the branch diff `<ref>...HEAD`.
+3. Otherwise, if the working tree is dirty (any modified, staged, or untracked files): the target is the uncommitted changes.
+4. Otherwise: the target is the branch diff against the default branch — resolve via `git symbolic-ref refs/remotes/origin/HEAD` (strip to the branch name), falling back to `main`, then `master`, whichever exists.
+5. If both the working tree and the branch diff are empty, tell the user there is nothing to review and stop.
+
+Execution mode:
+- If the arguments include `--wait` or `--background`, do not ask.
+- Otherwise estimate the size first (`git diff --shortstat` and `git diff --shortstat --cached` for the working tree; `git diff --shortstat <base>...HEAD` for a branch), then use AskUserQuestion exactly once with two options, recommended option first with a `(Recommended)` label suffix:
+  - `Wait for results` — recommend only for clearly tiny changes (roughly 1–2 files).
+  - `Run in background` — recommend in every other case, including unclear size.
+
+Compose the review prompt:
+- Read `references/review-prompt.md` in this skill's directory and fill in its placeholders:
+  - `{{TARGET_INSTRUCTIONS}}`: the exact read-only git commands Kimi should run to see the change. Working tree: "Run `git status --untracked-files=all`, `git diff`, and `git diff --cached`; review all uncommitted work including untracked files." Branch: "Run `git diff <base>...HEAD`; review only the changes on this branch."
+  - `{{FOCUS}}`: the user's focus text, or `None — general review.` if there is none.
+- Do not inline the diff into the prompt; the prompt tells Kimi to collect it itself.
+
+Run the review from the repository root.
+
+Foreground:
+```bash
+kimi -p "<composed prompt>"
+```
+
+Background: the same command via Bash with `run_in_background: true`. Tell the user the review is running and the result will arrive as a task notification; do not poll for output in this turn.
+
+Present results:
+- Return Kimi's stdout verbatim — no paraphrasing, no summarizing, no commentary between the user and the findings.
+- Never apply, or offer to apply, fixes for the findings. Stop after presenting them.
+- After the run completes, run `git status --short --untracked-files=all` again and compare with the pre-run snapshot. If anything changed, warn the user prominently: the review run modified the working tree (headless Kimi has no read-only mode) and they should inspect `git status` / `git diff` before trusting the tree.
+
+Failures:
+- `kimi` not found: point the user at `/kimi-setup` for install guidance.
+- stderr mentions login, 401, unauthorized, or API key: authentication problem — tell the user to type `! kimi login` or run `/kimi-setup`.
+- Anything else: report the exit code and the relevant tail of stderr verbatim.

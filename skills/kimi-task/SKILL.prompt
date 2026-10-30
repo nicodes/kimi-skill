@@ -1,0 +1,46 @@
+---
+name: kimi-task
+description: Delegate a coding task to the Kimi Code CLI, then report its output and any file changes
+argument-hint: '[--background] [--continue] [-m <model>] <task>'
+disable-model-invocation: true
+allowed-tools: Bash(kimi:*), Bash(git:*)
+---
+
+Delegate a task to the Kimi Code CLI (`kimi`) and report back.
+
+Raw slash-command arguments:
+`$ARGUMENTS`
+
+Core constraints:
+- You are a thin dispatcher. Kimi does the work — do not implement, extend, or fix anything yourself.
+- Return Kimi's output faithfully, and leave Kimi's changes alone unless the user asks you to touch them.
+
+Argument handling:
+- `--background`: run in a background Bash task.
+- `--continue`: resume Kimi's most recent session in this directory (pass `--continue` through to kimi).
+- `-m <model>`: pass through to kimi (e.g. `-m kimi-code/kimi-for-coding`).
+- Everything else is the task description.
+
+Compose the prompt:
+- One self-contained task per run: state the goal, the relevant constraints, and an explicit definition of done.
+- Preserve the user's wording and intent; add repository context (paths, commands) only when Kimi needs it to start working immediately.
+- When resuming with `--continue`, write a delta instruction ("Continue from where you left off: ...") rather than restating the whole original task.
+
+Run from the project root. Note: headless Kimi auto-approves its own tool calls — it can and will edit files.
+
+Foreground:
+```bash
+kimi -p "<composed task prompt>" [--continue] [-m <model>]
+```
+
+Background: the same command via Bash with `run_in_background: true` when `--background` was passed or the task is clearly long (multi-file feature, large refactor). Tell the user it is running; the result will arrive as a task notification.
+
+Report:
+- Present Kimi's stdout verbatim first.
+- Then show what changed: `git status --short --untracked-files=all` and `git diff --stat` (skip silently outside a git repo).
+- Do not review, refactor, or "clean up" Kimi's work unprompted.
+
+Failures:
+- `kimi` not found: point the user at `/kimi-setup`.
+- stderr mentions login, 401, unauthorized, or API key: tell the user to type `! kimi login` or run `/kimi-setup`.
+- Anything else: report the exit code and the relevant stderr lines verbatim.
